@@ -4,20 +4,22 @@ import { useEffect, useState } from "react";
 import { createClient } from "../../../lib/supabase/client";
 import CoachNav from "../../../components/CoachNav";
 
+type Drill = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  theme: string;
+  duration: number;
+  material: string;
+};
+
 type Submission = {
   id: string;
   status: string;
   created_at: string;
-  user_drills: {
-    id: string;
-    title: string;
-    description: string;
-    category: string;
-    level: string;
-    theme: string;
-    duration: number;
-    material: string;
-  };
+  user_drills: Drill | Drill[] | null;
 };
 
 export default function AdminPropositions() {
@@ -54,12 +56,17 @@ export default function AdminPropositions() {
       return;
     }
 
-    setSubmissions((data as Submission[]) || []);
+    setSubmissions((data ?? []) as Submission[]);
   }
 
   useEffect(() => {
     loadSubmissions();
   }, []);
+
+  function getDrill(sub: Submission): Drill | null {
+    if (!sub.user_drills) return null;
+    return Array.isArray(sub.user_drills) ? sub.user_drills[0] ?? null : sub.user_drills;
+  }
 
   async function validateOnly(id: string) {
     setMessage("");
@@ -83,9 +90,7 @@ export default function AdminPropositions() {
     setMessage("");
     setError("");
 
-    const drill = Array.isArray(sub.user_drills)
-      ? sub.user_drills[0]
-      : sub.user_drills;
+    const drill = getDrill(sub);
 
     if (!drill) {
       setError("Exercice introuvable dans la proposition.");
@@ -217,13 +222,8 @@ export default function AdminPropositions() {
 
       <h1>Validation admin</h1>
 
-      {message && (
-        <p style={{ color: "green", fontWeight: "bold" }}>{message}</p>
-      )}
-
-      {error && (
-        <p style={{ color: "red", fontWeight: "bold" }}>{error}</p>
-      )}
+      {message && <p style={{ color: "green", fontWeight: "bold" }}>{message}</p>}
+      {error && <p style={{ color: "red", fontWeight: "bold" }}>{error}</p>}
 
       {submissions.length === 0 && !error && (
         <p>Aucune proposition pour le moment.</p>
@@ -231,10 +231,7 @@ export default function AdminPropositions() {
 
       <div style={{ display: "grid", gap: "20px", marginTop: "20px" }}>
         {submissions.map((sub) => {
-          const drill = Array.isArray(sub.user_drills)
-            ? sub.user_drills[0]
-            : sub.user_drills;
-
+          const drill = getDrill(sub);
           if (!drill) return null;
 
           const isPending = sub.status === "pending";
@@ -262,7 +259,6 @@ export default function AdminPropositions() {
               </div>
 
               <p>{drill.description}</p>
-
               <p><b>Catégorie :</b> {drill.category}</p>
               <p><b>Niveau :</b> {drill.level}</p>
               <p><b>Thème :</b> {drill.theme}</p>
